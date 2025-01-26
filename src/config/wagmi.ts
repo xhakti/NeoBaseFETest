@@ -3,7 +3,7 @@ import { arbitrum, mainnet, polygon, sepolia } from "wagmi/chains";
 
 export const config = getDefaultConfig({
   appName: "RainbowKit demo",
-  projectId: "YOUR_PROJECT_ID",
+  projectId: process.env.NEXT_PUBLIC_PROJECT_ID!,
   chains: [
     mainnet,
     polygon,

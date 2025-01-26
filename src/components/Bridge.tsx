@@ -10,20 +10,57 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
+import { useAccount, useWriteContract } from "wagmi";
+import { parseEther, encodePacked, getAddress } from "viem";
+
+import { OMNIContractAddress, OFTContractABI } from "@/contract/OFTABI";
 
 const Bridge = () => {
   const [selectedToken, setSelectedToken] = useState("");
   const [fromAmount, setFromAmount] = useState("0");
   const [toAmount, setToAmount] = useState("0");
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const { isConnected: isWalletConnected, address } = useAccount();
+  const { writeContractAsync } = useWriteContract();
 
-  const handleConnectWallet = () => {
-    setIsWalletConnected(true);
-  };
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleFromAmountChange = (value: string) => {
     setFromAmount(value);
     setToAmount(value);
+  };
+
+  const handleBridge = async () => {
+    if (!address) return;
+    setIsLoading(true);
+
+    try {
+      const amountInWei = parseEther(fromAmount);
+
+      const toAddressBytes32 = encodePacked(
+        ["address"],
+        [getAddress(address)]
+      ).padEnd(66, "0");
+
+      const callParams = {
+        refundAddress: address,
+        zroPaymentAddress: "0x0000000000000000000000000000000000000000",
+        adapterParams: "0x",
+      };
+
+      // Send the transaction
+      await writeContractAsync({
+        address: OMNIContractAddress,
+        abi: OFTContractABI,
+        functionName: "sendFrom",
+        args: [address, 42161, toAddressBytes32, amountInWei, callParams],
+        value: parseEther("0.01"),
+      });
+
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Bridge failed:", error);
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -104,11 +141,18 @@ const Bridge = () => {
           </div>
 
           <Button
-            onClick={handleConnectWallet}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-full"
+            onClick={handleBridge}
+            className={`w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-full ${
+              !isWalletConnected ? "cursor-not-allowed" : "cursor-pointer"
+            }`}
             variant={"gradient2"}
+            disabled={!address}
           >
-            {isWalletConnected ? "Bridge Tokens" : "Connect Wallet"}
+            {isLoading
+              ? "Processing..."
+              : isWalletConnected
+              ? "Transfer"
+              : "Connect Wallet"}
           </Button>
         </div>
       </CardContent>

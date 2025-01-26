@@ -2,14 +2,37 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAccount, useWriteContract } from "wagmi";
+import { OMNIContractAddress, OFTContractABI } from "@/contract/OFTABI";
+import { parseEther } from "viem";
 
 const Transfer = () => {
-  const [amount, setAmount] = useState("");
-  const [address, setAddress] = useState("");
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const [amount, setAmount] = useState<string>("");
+  const [recipientAddress, setRecipientAddress] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleConnectWallet = () => {
-    setIsWalletConnected(true);
+  const { isConnected: isWalletConnected, address } = useAccount();
+  const { writeContractAsync } = useWriteContract();
+
+  const handleTransfer = async () => {
+    if (!address || !amount || !recipientAddress) return;
+    setIsLoading(true);
+
+    try {
+      const amountInWei = parseEther(amount);
+
+      // Then do the transfer
+      await writeContractAsync({
+        address: OMNIContractAddress,
+        abi: OFTContractABI,
+        functionName: "transfer",
+        args: [recipientAddress, amountInWei],
+      });
+
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Transfer failed:", error);
+    }
   };
 
   return (
@@ -23,7 +46,7 @@ const Transfer = () => {
                 Total Amount to transfer
               </span>
               <Input
-                type="number"
+                type="text"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className="bg-transparent text-white border-0 focus-visible:ring-0 p-0 h-auto w-full"
@@ -42,8 +65,8 @@ const Transfer = () => {
               </span>
               <Input
                 type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
+                value={recipientAddress}
+                onChange={(e) => setRecipientAddress(e.target.value)}
                 className="bg-transparent text-white border-0 focus-visible:ring-0 p-0 h-auto w-full"
                 placeholder="0"
                 style={{ fontSize: "2rem", lineHeight: "1" }}
@@ -53,11 +76,18 @@ const Transfer = () => {
         </div>
 
         <Button
-          onClick={handleConnectWallet}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-full"
+          onClick={handleTransfer}
+          className={`w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-full ${
+            !isWalletConnected ? "cursor-not-allowed" : "cursor-pointer"
+          }`}
           variant={"gradient2"}
+          disabled={!address || !amount || !recipientAddress || isLoading}
         >
-          {isWalletConnected ? "Transfer" : "Connect Wallet"}
+          {isLoading
+            ? "Processing..."
+            : isWalletConnected
+            ? "Transfer"
+            : "Connect Wallet"}
         </Button>
       </div>
     </div>
