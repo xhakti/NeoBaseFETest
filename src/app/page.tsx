@@ -1,18 +1,14 @@
-import ConnectBtn from "@/components/ConnectBtn";
+import Link from "next/link";
 
-function Page() {
+const Home = () => {
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "flex-end",
-        padding: 12,
-      }}
-    >
-      <ConnectBtn />
-      
-    </div>
+    <>
+      <div>Home</div>
+      <div>
+        <Link href="/transferAndBridge">getStarted</Link>
+      </div>
+    </>
   );
-}
+};
 
-export default Page;
+export default Home;
